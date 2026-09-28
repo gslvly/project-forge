@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+    "target": "es2023",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    /* plugins/ 下为从既有项目迁入的构建插件，按宽松配置编写，
+       这里放宽以下选项以免改动插件源码引入回归 */
+    "strict": false,
+    "verbatimModuleSyntax": false,
+    "erasableSyntaxOnly": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+
+    /* Linting */
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["vite.config.ts", "plugins/**/*.ts"]
+}

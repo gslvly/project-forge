@@ -1,0 +1,52 @@
+# 官方 nginx 镜像启动时用 envsubst 生成 /etc/nginx/conf.d/default.conf，
+# 只替换 ${UPLOAD_MAX_SIZE_MB}（见 compose 的 NGINX_ENVSUBST_FILTER），其余 $ 变量原样保留。
+
+# 用 Docker 内置 DNS 按需解析 app，后端容器重建换了 IP 也不用重启 Nginx
+resolver 127.0.0.11 valid=10s ipv6=off;
+
+server {
+    listen 8080 default_server;
+    server_name _;
+    server_tokens off;
+    client_max_body_size ${UPLOAD_MAX_SIZE_MB}m;
+
+    set $app_upstream http://app:8000;
+
+    # 超限时由 Nginx 直接拦下，也按统一结构返回，调用方不用额外处理 HTML 错误页
+    error_page 413 = @too_large;
+    location @too_large {
+        default_type "application/json; charset=utf-8";
+        return 413 '{"code":2003,"message":"文件不能超过 ${UPLOAD_MAX_SIZE_MB} MB","data":null}';
+    }
+
+    location ^~ /uploads/.upload-tmp/ {
+        return 404;
+    }
+
+    location /uploads/ {
+        alias /data/uploads/;
+        autoindex off;
+        # 文件名就是内容 hash，同一 URL 的内容永远不变，可以长缓存。
+        # 不加 always：404 不能被缓存一年
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        add_header X-Content-Type-Options nosniff always;
+    }
+
+    location = /api/health {
+        access_log off;
+        proxy_pass $app_upstream;
+    }
+
+    location /api/ {
+        proxy_pass $app_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location / {
+        return 404;
+    }
+}

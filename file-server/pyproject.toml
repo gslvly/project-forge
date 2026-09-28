@@ -1,0 +1,35 @@
+[project]
+name = "file-server"
+version = "0.1.0"
+description = "独立部署的通用文件上传服务"
+requires-python = ">=3.12"
+dependencies = [
+    "anyio>=4.14.2",
+    "fastapi>=0.141.1",
+    "pydantic-settings>=2.15.0",
+    "python-multipart>=0.0.32",
+    "uvicorn[standard]>=0.52.3",
+]
+
+[dependency-groups]
+dev = [
+    # starlette TestClient 依赖它
+    "httpx2>=2.10.0",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.16.3",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# E/F 基础错误，I 导入排序，UP 语法现代化，B 常见 bug，SIM 简化
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+# 相对 rootdir（本文件所在目录）解析，让测试能 import app 包
+pythonpath = ["."]

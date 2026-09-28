@@ -1,0 +1,49 @@
+# 独立文件服务：Nginx 容器对外提供 /uploads 直出与 /api 转发，
+# FastAPI 容器只在 compose 内网可达，负责写入。两者共享同一个上传目录。
+# 环境变量见 .env.example，部署步骤见 README.md。
+
+name: file-server
+
+services:
+  app:
+    build:
+      context: .
+    image: file-server:latest
+    restart: unless-stopped
+    # 注意 Compose 自动读的 .env 只做 ${} 插值，必须显式声明才会注入容器
+    env_file:
+      - ./.env
+    environment:
+      # 镜像内部契约，与下面的挂载点一致，不要在 .env 里改
+      UPLOAD_DIR: /data/uploads
+    volumes:
+      # 上传文件的持久化目录，删除或重建容器后不能丢
+      - ./data/uploads:/data/uploads
+    logging: &logging
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "10"
+
+  nginx:
+    image: docker.m.daocloud.io/library/nginx:1.30-alpine
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      UPLOAD_MAX_SIZE_MB: ${UPLOAD_MAX_SIZE_MB:-20}
+      NGINX_ENVSUBST_FILTER: UPLOAD_MAX_SIZE_MB
+    ports:
+      # 左边是宿主机端口。只给内网用时可写成 "<内网IP>:9000:8080"，避免暴露到公网
+      - "${FILE_SERVER_PORT:-9000}:8080"
+    volumes:
+      - ./nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./data/uploads:/data/uploads:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    logging: *logging

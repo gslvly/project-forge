@@ -1,0 +1,39 @@
+{
+  "skill_name": "api-curl",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "请用 CLI 验证当前运行中的后端 GET /api/auth/me 接口，必须使用真实 admin 登录态，并告诉我 HTTP 状态码和返回的用户名。不要把 token 打印出来。",
+      "expected_output": "先按源码确认接口契约，再通过配套 CLI 复用 dev.env 自动签发并注入 admin JWT；本机真实请求返回 HTTP 200、code 0 和 username=admin，输出不含 JWT，并明确 HTTP 目标是 localhost。",
+      "files": [],
+      "expectations": [
+        "使用 scripts/api-curl，而不是账号密码登录或手工拼 Authorization",
+        "请求真实 localhost:8000 服务并报告 HTTP 状态码与统一响应 code",
+        "输出不包含 JWT 字符串或完整 Authorization 头",
+        "明确 HTTP 请求目标是本机，自动鉴权配置来自 dev.env"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "帮我从命令行调一下当前用户的 /api/skills/mine 接口。后端已经由我启动，不要启动新服务，也别通过浏览器拿 token。",
+      "expected_output": "读取 skill 路由和响应 schema 后，使用 api-curl CLI 请求真实服务，自动以真实数据库中的用户鉴权并展示响应。",
+      "files": [],
+      "expectations": [
+        "不启动后端，也不读取浏览器 localStorage",
+        "按 router、route、schema 顺序确认接口",
+        "使用自动鉴权 CLI 调用 /api/skills/mine"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "验收 /api/auth/me 的鉴权：先证明没带 token 会 401/code 1401，再证明自动带 admin token 后会 200。必须打真实 localhost 服务。",
+      "expected_output": "分别用 --no-auth 和默认自动鉴权执行两次真实 HTTP 请求，核对 401/code 1401 与 200/code 0，且不泄露 Token。",
+      "files": [],
+      "expectations": [
+        "无鉴权请求使用 --no-auth 并核对 HTTP 401 和 code 1401",
+        "鉴权请求使用自动签发的 admin Token 并核对 HTTP 200 和 code 0",
+        "两次请求都指向回环地址上的真实服务且输出中没有 Token"
+      ]
+    }
+  ]
+}

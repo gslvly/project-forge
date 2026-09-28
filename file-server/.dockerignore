@@ -1,0 +1,13 @@
+.env
+data
+nginx
+tests
+README.md
+
+.venv
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.ruff_cache
+# 锁文件记录的是 pypi.org 地址，镜像内走国内源重新解析
+uv.lock
