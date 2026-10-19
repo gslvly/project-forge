@@ -21,6 +21,11 @@
 - 前端的 type 由后端的 OpenAPI 生成。后端能自动导出 schema（比如 FastAPI）就直接用它；导不出时，以 openapi.yaml 作为唯一来源。
 - 确定了部署方案再生成部署文件。镜像要轻量，并使用多阶段构建。
 - 持久化数据（文件、数据库）在开发开始前单独部署好。开发阶段所有人共用同一份数据，方便调试。
+- 有后端就要在初始化时把日志搭好，规范见 AGENTS.md 的「日志」一节：
+  - 选技术栈里主流的结构化日志库（比如 Python 用 structlog，Node 用 pino），输出 jsonl。
+  - 请求中间件负责处理 `X-Request-ID` 并记录 `http.request`；全局异常处理统一记录 `error`；按前端模板的约定实现 `/diagnostics/frontend-errors` 接口。
+  - 本地写到 `logs/app.jsonl`，按大小轮转，并加入 git 忽略；线上输出到 stdout。
+  - 写一个会报错的测试接口，确认成功请求、业务失败、意外异常三种情况各自落下的日志符合规范后再删掉。
 
 ## 模板
 | 位置 | 内容 | 何时用 |
@@ -38,3 +43,4 @@
 - 需要 `CLAUDE.md` 时，内容只写一行 `@AGENTS.md`，并加入 git 忽略。
 - skill 放在 `ai-skills/` 目录下，每个子目录是一个 skill。要软链到各 AI 工具读取 skill 的目录（比如 `.claude/skills`），不做软链的话工具加载不到它们。
 - 文件服务或数据库部署完成后，如果还没有对应的 skill，就补一个，让 AI 能管理其中的数据。skill 提供的命令要自带鉴权，参数和原命令保持一致，比如 `mysql`。数据库 skill 在查询前先获取索引信息，避免全表扫描。
+- 线上日志如果汇集到了日志平台（比如 Graylog），并且还没有对应的 skill，就补一个，让 AI 能按 `request_id`、`event`、`level` 查询线上日志。

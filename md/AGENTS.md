@@ -61,6 +61,50 @@
 }
 ```
 
+## 日志
+日志用于上线后排查问题，主要由 AI 读取，格式必须固定，能直接用 `jq` / `grep` 筛选。
+
+### 格式
+- 一行一条 JSON（jsonl）。堆栈等多行内容放进字段里，不能跨行。
+- 本地写到 `logs/app.jsonl`，线上输出到 stdout。禁止用 `print` / `console.log` 代替日志。
+- 字段名全项目统一，不许自造同义字段。每条必带：
+
+| 字段 | 说明 |
+|---|---|
+| `ts` | ISO 8601，带时区，精确到毫秒 |
+| `level` | `info` / `warn` / `error` |
+| `event` | 固定的事件名，如 `http.request`、`order.create`，禁止拼接变量 |
+| `msg` | 给人看的简短说明 |
+| `request_id` | 同一请求的所有日志共用。取请求头 `X-Request-ID`，没有或不合法时生成，并在响应头返回 |
+
+- `service`、`env`、`version`（git commit）和 `request_id` 由 logger 自动附加，业务代码不用手动传。
+- 有登录态时带上 `user_id`。其他数据平铺成字段（如 `order_id`、`duration_ms`），不要拼进 `msg`。
+
+### 记什么
+- **成功只记简要信息**：每个请求记一条 `http.request`，包含 `method`、`route`（路由模板，不是实际路径）、`status`、`code`（业务码）、`duration_ms`，不记请求体和返回体。关键写操作（创建、删除、支付、状态流转）另记一条，带上业务 id。
+- **可预期的失败记 `warn`**：参数校验失败、401/403/404、业务规则拒绝。记下原因，不带堆栈。
+- **意外错误记 `error`，信息要全**：
+  - `error` 对象：`type`、`message`、`stack`（完整堆栈）
+  - 出错时的入参（脱敏、截断）和相关的业务 id
+  - 调外部服务（HTTP、数据库、队列）失败时，记下目标地址、耗时、返回状态和返回体（截断）
+- 调外部服务成功时不记；耗时超过 1s 的记一条 `warn`。
+- 后台任务、定时任务：开始时不记，结束时记一条，带 `duration_ms` 和处理条数；失败时按 `error` 记。
+- 前端上报到 `/diagnostics/frontend-errors` 的错误，按 `event: frontend.error` 写进同一份日志，`related_request_id` 原样保留。
+
+### 禁止
+- 禁止记录密码、token、cookie、密钥；手机号、身份证等敏感信息要脱敏。
+- 禁止吞异常：catch 之后要么处理掉并记 `warn`，要么继续抛出。
+- 禁止同一个错误记多次：中间层补充上下文后继续抛出，由最外层（全局异常处理、任务入口）统一记录一次。
+- 单个字段超过 2KB 要截断。
+
+### 查日志
+```bash
+jq -c 'select(.level=="error")' logs/app.jsonl | tail -20   # 最近的错误
+grep '<request_id>' logs/app.jsonl                           # 一次请求的完整链路
+jq -c 'select(.event=="order.create")' logs/app.jsonl       # 按事件筛选
+```
+用户反馈接口报错时，先要到 `request_id`（前端 `RequestError.requestId`），再按上面的命令查。
+
 ## 方案确认
 当遇到用户的需求，不可避免的需要使用非稳定方案时，必须告诉用户。比如用户让完成程序："如果辱骂他人，就禁言"，实现用正则匹配。
 
