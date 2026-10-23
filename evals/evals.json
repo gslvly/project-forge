@@ -1,0 +1,23 @@
+{
+  "skill_name": "init-project",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "帮我在 /tmp/pf-eval/ticket-desk 起一个新项目：公司内部用的工单系统，前端用 vue，后端 python，工单要能传附件截图。",
+      "expected_output": "先查看目标目录，然后一次性问完全部决策点（技术栈、登录鉴权、持久化及是否已有共享实例、部署方式、模板），每项给推荐默认值；推荐的模板与技术栈匹配（AGENTS.md、frontend、ai-bridge、file-server、api-curl）；在用户确认前不创建任何文件。",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "在 /tmp/pf-eval/notify-svc 新建一个纯后端项目：FastAPI 写的消息通知服务，先只要一个 /health 接口。不需要登录、不需要数据库和文件存储、暂时不部署。方案我已经确认过了，不用再问我，直接做完并跑通。",
+      "expected_output": "用 uv 建 FastAPI 项目并 git init；AGENTS.md 按纯后端取舍并补上启动命令、端口、目录；CLAUDE.md 只有 @AGENTS.md 且被 git 忽略；structlog 输出 jsonl 到 logs/app.jsonl（轮转、git 忽略），请求中间件处理 X-Request-ID 并记 http.request，全局异常记 error；验证三种日志后删掉测试报错接口；根目录有 run.sh；测试通过。",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "在 /tmp/pf-eval/asset-admin 初始化一个前后端项目：前端 vue3 + element-plus + ts + vite + vue-router，后端 FastAPI，需要登录（用户名密码 + JWT），数据库先用 sqlite，不需要文件存储，暂不部署。方案我已确认，直接做，做完跑通。",
+      "expected_output": "monorepo（frontend/ + backend/ + run.sh）；前端用 pnpm create vite 建骨架后并入 assets/frontend 的模板，依赖用 pnpm add 装最新，auth.ts 占位 key 与 any 已替换，vite.config 的引用补齐或删除，构建通过；ai-bridge.md 合并进 AGENTS.md；后端日志规范与 /diagnostics/frontend-errors 接口；api-curl 改写后放进 ai-skills/ 并软链到 .claude/skills，能真实请求鉴权接口；前端 type 由 OpenAPI 生成。",
+      "files": []
+    }
+  ]
+}
